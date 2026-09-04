@@ -1,44 +1,61 @@
-max_pellets    = 300;
-max_predators  = 14;
-safe_radius    = 700;               // predators never spawn closer than this to the player
-predator_band  = [0.35, 1.8];       // predator mass as a multiple of player mass
-spawn_interval = 24;                // steps between top-ups (0.4 s at 60 fps)
+// The arena is one fixed screen that wraps on both axes, so counts are tuned
+// to the visible area rather than to a large scrolling room.
+max_pellets    = 60;
+max_enemies    = 6;                 // ceiling shared by every hole
+max_holes      = 4;
+safe_radius    = 260;               // nothing spawns closer than this to the player
+hole_band      = [0.6, 2.5];        // hole mass as a multiple of player mass
+hole_life      = [18, 40];          // seconds a hole lasts before collapsing
+hole_refill    = 3.0;               // seconds before a collapsed hole is replaced
+spawn_interval = 24;                // steps between pellet top-ups (0.4 s at 60 fps)
 
-min_zoom = 0.18;                    // how far the camera will pull back
-zoom     = 1;
-cam      = view_camera[0];          // the camera enabled in the Room Editor
-cam_w    = camera_get_view_width(cam);
-cam_h    = camera_get_view_height(cam);
+// Fixed camera: it shows the whole world and never moves again.
+cam = view_camera[0];
+camera_set_view_size(cam, room_width, room_height);
+camera_set_view_pos(cam, 0, 0);
 
 game_over        = false;
+frozen           = false;
 last_player_mass = BASE_MASS;
+hole_timer       = 0;
+
+/// Somewhere at least safe_radius from the player, measured round the torus so
+/// a "safe" spot cannot turn out to be one step through the nearest seam.
+function spawn_point() {
+    var _px = room_width / 2, _py = room_height / 2;
+    if (instance_exists(obj_player)) { _px = obj_player.x; _py = obj_player.y; }
+    var _x = random_range(0, room_width), _y = random_range(0, room_height);
+    var _tries = 0;
+    while (torus_distance(_x, _y, _px, _py) < safe_radius && _tries < 20) {
+        _x = random_range(0, room_width); _y = random_range(0, room_height); _tries++;
+    }
+    return [_x, _y];
+}
 
 function spawn_pellet() {
     instance_create_layer(random_range(0, room_width), random_range(0, room_height),
         LAYER_INSTANCES, obj_pellet, { mass_value: random_range(0.5, 2.5) });
 }
 
-function spawn_predator() {
-    var _px = room_width / 2, _py = room_height / 2;
-    if (instance_exists(obj_player)) { _px = obj_player.x; _py = obj_player.y; }
-    var _x = random_range(0, room_width), _y = random_range(0, room_height);
-    var _tries = 0;
-    while (point_distance(_x, _y, _px, _py) < safe_radius && _tries < 20) {
-        _x = random_range(0, room_width); _y = random_range(0, room_height); _tries++;
-    }
-    var _m = last_player_mass * random_range(predator_band[0], predator_band[1]);
-    instance_create_layer(_x, _y, LAYER_INSTANCES, obj_predator, { start_mass: _m });
+/// Holes are sized against the player, so there is usually one they can enter
+/// and one big enough to be pouring out something dangerous.
+function spawn_hole() {
+    var _p = spawn_point();
+    instance_create_layer(_p[0], _p[1], LAYER_INSTANCES, obj_hole, {
+        start_mass: last_player_mass * random_range(hole_band[0], hole_band[1]),
+        life:       random_range(hole_life[0], hole_life[1]),
+    });
 }
 
-/// Called by obj_player.get_eaten().
+/// Called by obj_player.get_eaten(), from inside a loop over creatures.
+/// Only raises the flag; Step does the freezing once that loop has finished.
 function on_player_eaten(_final_mass) {
     last_player_mass = _final_mass;
     game_over = true;
-    instance_deactivate_all(true);   // freeze everything except this controller
 }
 
-// Populate.
+// Populate. Rivals are not placed directly any more: they crawl out of holes.
 instance_create_layer(room_width / 2, room_height / 2, LAYER_INSTANCES, obj_player, { start_mass: BASE_MASS });
-repeat (max_pellets)   spawn_pellet();
-repeat (max_predators) spawn_predator();
+repeat (max_pellets) spawn_pellet();
+repeat (max_holes)   spawn_hole();
 alarm[0] = spawn_interval;

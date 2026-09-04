@@ -11,4 +11,7 @@ var _top = base_speed / power(mass / BASE_MASS, 0.25);
 var _rate = (_len > 0) ? accel : drag;
 steer_toward(_h * _top, _v * _top, _rate);
 
-event_inherited();   // apply_motion() + eat_nearby()
+event_inherited();   // update_hole_ignore() + apply_motion() + eat_nearby()
+
+var _hole = hole_under();
+if (_hole != noone) enter_hole(_hole);

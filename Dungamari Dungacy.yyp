@@ -22,9 +22,10 @@
   "name":"Dungamari Dungacy",
   "resources":[
     {"id":{"name":"obj_creature","path":"objects/obj_creature/obj_creature.yy",},},
+    {"id":{"name":"obj_enemy","path":"objects/obj_enemy/obj_enemy.yy",},},
+    {"id":{"name":"obj_hole","path":"objects/obj_hole/obj_hole.yy",},},
     {"id":{"name":"obj_pellet","path":"objects/obj_pellet/obj_pellet.yy",},},
     {"id":{"name":"obj_player","path":"objects/obj_player/obj_player.yy",},},
-    {"id":{"name":"obj_predator","path":"objects/obj_predator/obj_predator.yy",},},
     {"id":{"name":"obj_world","path":"objects/obj_world/obj_world.yy",},},
     {"id":{"name":"rm_arena","path":"rooms/rm_arena/rm_arena.yy",},},
     {"id":{"name":"scr_rules","path":"scripts/scr_rules/scr_rules.yy",},},
