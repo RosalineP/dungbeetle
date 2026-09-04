@@ -1,0 +1,45 @@
+{
+  "$GMProject":"v1",
+  "%Name":"Dungamari Dungacy",
+  "AudioGroups":[
+    {"$GMAudioGroup":"v1","%Name":"audiogroup_default","exportDir":"","name":"audiogroup_default","resourceType":"GMAudioGroup","resourceVersion":"2.0","targets":-1,},
+  ],
+  "configs":{
+    "children":[],
+    "name":"Default",
+  },
+  "defaultScriptType":1,
+  "Folders":[],
+  "ForcedPrefabProjectReferences":[],
+  "IncludedFiles":[
+    {"$GMIncludedFile":"","%Name":"dungacy.mp3","CopyToMask":-1,"filePath":"datafiles","name":"dungacy.mp3","resourceType":"GMIncludedFile","resourceVersion":"2.0",},
+  ],
+  "isEcma":false,
+  "LibraryEmitters":[],
+  "MetaData":{
+    "IDEVersion":"2026.0.0.16",
+  },
+  "name":"Dungamari Dungacy",
+  "resources":[
+    {"id":{"name":"obj_creature","path":"objects/obj_creature/obj_creature.yy",},},
+    {"id":{"name":"obj_pellet","path":"objects/obj_pellet/obj_pellet.yy",},},
+    {"id":{"name":"obj_player","path":"objects/obj_player/obj_player.yy",},},
+    {"id":{"name":"obj_predator","path":"objects/obj_predator/obj_predator.yy",},},
+    {"id":{"name":"obj_world","path":"objects/obj_world/obj_world.yy",},},
+    {"id":{"name":"rm_arena","path":"rooms/rm_arena/rm_arena.yy",},},
+    {"id":{"name":"scr_rules","path":"scripts/scr_rules/scr_rules.yy",},},
+    {"id":{"name":"snd_music","path":"sounds/snd_music/snd_music.yy",},},
+    {"id":{"name":"spr_ball","path":"sprites/spr_ball/spr_ball.yy",},},
+    {"id":{"name":"spr_beetle","path":"sprites/spr_beetle/spr_beetle.yy",},},
+    {"id":{"name":"spr_pellet","path":"sprites/spr_pellet/spr_pellet.yy",},},
+  ],
+  "resourceType":"GMProject",
+  "resourceVersion":"2.0",
+  "RoomOrderNodes":[
+    {"roomId":{"name":"rm_arena","path":"rooms/rm_arena/rm_arena.yy",},},
+  ],
+  "templateType":"game",
+  "TextureGroups":[
+    {"$GMTextureGroup":"","%Name":"Default","autocrop":true,"border":2,"compressFormat":"bz2","customOptions":"","directory":"","groupParent":null,"isScaled":true,"loadType":"default","mipsToGenerate":0,"name":"Default","resourceType":"GMTextureGroup","resourceVersion":"2.0","targets":-1,},
+  ],
+}
