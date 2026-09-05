@@ -9,6 +9,8 @@ hole_life      = [18, 40];          // seconds a hole lasts before collapsing
 hole_refill    = 3.0;               // seconds before a collapsed hole is replaced
 spawn_interval = 24;                // steps between pellet top-ups (0.4 s at 60 fps)
 
+play_music(snd_music);
+
 // Fixed camera: it shows the whole world and never moves again.
 cam = view_camera[0];
 camera_set_view_size(cam, room_width, room_height);
@@ -16,6 +18,7 @@ camera_set_view_pos(cam, 0, 0);
 
 game_over        = false;
 frozen           = false;
+over_time        = 0;      // seconds since death, before handing over to the score screen
 last_player_mass = BASE_MASS;
 hole_timer       = 0;
 

@@ -9,12 +9,14 @@ switch (state) {
         _dir = torus_direction(x, y, wander_x, wander_y);
         break;
     case STATE.CHASE:
-        _dir = torus_direction(x, y, obj_player.x, obj_player.y);
+        _dir = wander_bias(torus_direction(x, y, obj_player.x, obj_player.y));
         break;
     case STATE.FLEE:
-        _dir = torus_direction(obj_player.x, obj_player.y, x, y);
+        _dir = wander_bias(torus_direction(obj_player.x, obj_player.y, x, y));
         break;
     case STATE.HOLE:
+        // Deliberately exact: a bent approach makes rivals orbit a small hole
+        // instead of dropping into it.
         _dir = torus_direction(x, y, hole_target.x, hole_target.y);
         break;
 }
