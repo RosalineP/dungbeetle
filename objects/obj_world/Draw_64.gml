@@ -12,6 +12,6 @@ if (game_over) {
 
     draw_text_ui(_gw / 2, _gh / 2 - 60, "eaten.", 48, c_white, 1, fa_center);
     draw_text_ui(_gw / 2, _gh / 2,
-        "your ball reached mass " + string(round(last_player_mass)) + ".", 26, c_white, 1, fa_center);
+        "your ball reached mass " + string(round(last_player_mass)) + ".", 24, c_white, 1, fa_center);
     draw_text_ui(_gw / 2, _gh / 2 + 48, "press any key", 24, c_white, 0.8, fa_center);
 }

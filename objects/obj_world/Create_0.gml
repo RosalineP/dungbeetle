@@ -1,4 +1,3 @@
-ui_font_init();
 play_music(snd_music);
 
 // The world starts one screen across and doubles in area each time the player

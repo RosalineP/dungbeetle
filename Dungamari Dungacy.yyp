@@ -24,6 +24,7 @@
   },
   "name":"Dungamari Dungacy",
   "resources":[
+    {"id":{"name":"main_font","path":"fonts/main_font/main_font.yy",},},
     {"id":{"name":"obj_btn_play","path":"objects/obj_btn_play/obj_btn_play.yy",},},
     {"id":{"name":"obj_creature","path":"objects/obj_creature/obj_creature.yy",},},
     {"id":{"name":"obj_enemy","path":"objects/obj_enemy/obj_enemy.yy",},},
@@ -51,7 +52,6 @@
     {"id":{"name":"spr_play","path":"sprites/spr_play/spr_play.yy",},},
     {"id":{"name":"spr_play1","path":"sprites/spr_play1/spr_play1.yy",},},
     {"id":{"name":"spr_shadow","path":"sprites/spr_shadow/spr_shadow.yy",},},
-    {"id":{"name":"spr_ui_font","path":"sprites/spr_ui_font/spr_ui_font.yy",},},
     {"id":{"name":"spr_worm","path":"sprites/spr_worm/spr_worm.yy",},},
   ],
   "resourceType":"GMProject",

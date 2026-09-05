@@ -37,12 +37,12 @@ for (var i = 0; i < SCORE_SLOTS; i++) {
     }
 
     if (!_filled) _alpha = 0.25;
-    draw_text_ui(_x_rank, _y, string(i + 1) + ".", 28, _col, _alpha);
+    draw_text_ui(_x_rank, _y, string(i + 1) + ".", 24, _col, _alpha);
     if (_filled) {
-        draw_text_ui(_x_name,  _y, _name, 28, _col, _alpha);
-        draw_text_ui(_x_score, _y, string(round(_sc)), 28, _col, _alpha, fa_right);
+        draw_text_ui(_x_name,  _y, _name, 24, _col, _alpha);
+        draw_text_ui(_x_score, _y, string(round(_sc)), 24, _col, _alpha, fa_right);
     } else {
-        draw_text_ui(_x_name, _y, "- - -", 28, _col, _alpha);
+        draw_text_ui(_x_name, _y, "- - -", 24, _col, _alpha);
     }
 }
 
