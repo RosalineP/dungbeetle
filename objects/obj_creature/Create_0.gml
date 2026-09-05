@@ -11,7 +11,25 @@ facing = 0;              // degrees, direction of travel
 roll = 0;                // degrees, ball spin for drawing only
 ball_color = c_white;    // tint for spr_ball; children override
 hole_ignore = noone;     // a hole we just came out of, ignored until we are clear of it
-beetle_sprite = spr_beetle;
+
+// Hole transit animation. ENTER is a hop, then beetle and ball converge on the
+// hole's mouth and drop out of sight. EXIT is the same thing played backwards.
+anim       = ANIM.NONE;
+anim_t     = 0;          // 0..1 through the current half of the move
+anim_hole  = noone;
+anim_time  = 0.42;       // seconds for one half
+beetle_sprite = spr_beetle_billy;
+beetle_frame  = 0;
+
+// The artwork is authored at whatever size suited the drawing, so each sprite is
+// scaled to the world size it should occupy. Reading it off the sprite means
+// swapping in new art needs no code change.
+// ball_fit is combined with image_xscale, so the ball grows with mass.
+// beetle_fit is used on its own: Billy is always the same size on screen.
+ball_fit   = BASE_RADIUS / (sprite_get_width(spr_ball) / 2);
+beetle_fit = 38 / sprite_get_width(beetle_sprite);   // Billy's width in pixels
+
+depth = DEPTH_CREATURE;
 
 mass = start_mass;
 
@@ -33,6 +51,47 @@ function steer_toward(_tx, _ty, _rate) {
     vy = _v[1];
 }
 
+function animating() {
+    return anim != ANIM.NONE;
+}
+
+function begin_enter_hole(_h) {
+    anim = ANIM.ENTER; anim_t = 0; anim_hole = _h;
+    vx = 0; vy = 0;
+}
+
+function begin_exit_hole(_h) {
+    anim = ANIM.EXIT; anim_t = 0; anim_hole = _h;
+    vx = 0; vy = 0;
+    x = _h.x; y = _h.y;
+}
+
+/// Where the animation has got to, as 0 (fully above ground, normal) through
+/// 1 (gone, at the mouth). EXIT is simply ENTER read backwards.
+function anim_progress() {
+    if (anim == ANIM.ENTER) return anim_t;
+    if (anim == ANIM.EXIT)  return 1 - anim_t;
+    return 0;
+}
+
+function update_anim() {
+    anim_t += dt() / anim_time;
+    if (anim_t < 1) return;
+    anim_t = 1;
+    finish_anim();
+}
+
+/// Reaching the bottom of an ENTER means leaving the arena. Children that have
+/// somewhere to come back up override this.
+function finish_anim() {
+    if (anim == ANIM.EXIT) {
+        anim = ANIM.NONE;
+        anim_hole = noone;
+        return;
+    }
+    instance_destroy();
+}
+
 /// Shove out of anyone we overlap but cannot eat, taking the short way round the seam.
 /// move_and_collide is no use here: it knows nothing about wrapping.
 function separate() {
@@ -40,6 +99,7 @@ function separate() {
     var _sx = 0, _sy = 0;
     with (obj_creature) {
         if (id != other.id
+        && !animating() && !other.animating()
         && !can_eat(mass, other.mass)
         && !can_eat(other.mass, mass)) {
             var _dx = torus_dx(other.x, x);
@@ -63,15 +123,24 @@ function apply_motion() {
     x += vx * _dt;
     y += vy * _dt;
     separate();
-    x = wrap_coord(x, room_width);
-    y = wrap_coord(y, room_height);
+    x = wrap_coord(x, WORLD_W);
+    y = wrap_coord(y, WORLD_H);
 
     var _r = radius();
     var _spd = point_distance(0, 0, vx, vy);
     if (_spd > 10) {
-        facing += angle_difference(point_direction(0, 0, vx, vy), facing) * min(1, 10 * _dt);
+        // Heavy balls swing round slowly, matching how sluggishly the velocity
+        // itself is allowed to turn.
+        var _turn = 10 * mass_agility_factor(mass);
+        facing += angle_difference(point_direction(0, 0, vx, vy), facing) * min(1, _turn * _dt);
     }
-    roll -= radtodeg(_spd * _dt / _r);   // arc length / radius = angle
+
+    // Roll by the distance travelled ALONG the way we are pointing, not by raw
+    // speed. Backing up then unwinds the spin instead of winding it further the
+    // same way, which is what sells the ball as rolling rather than spinning.
+    var _fwd = vx * lengthdir_x(1, facing) + vy * lengthdir_y(1, facing);
+    roll += radtodeg(_fwd * _dt / _r);   // arc length / radius = angle
+    beetle_frame += _spd * _dt * 0.05;   // Billy scuttles faster the faster we go
 }
 
 /// The mouth: anything whose body reaches inside radius * mouth_scale is a candidate.
@@ -89,6 +158,7 @@ function eat_nearby() {
     // Other creatures: only if we pass the size rule.
     with (obj_creature) {
         if (id != other.id
+        && !animating()
         && can_eat(other.mass, mass)
         && torus_distance(other.x, other.y, x, y) < _r + radius()) {
             other.set_mass(other.mass + mass * other.growth_yield);
@@ -102,7 +172,8 @@ function eat_nearby() {
 function hole_under() {
     var _found = noone;
     with (obj_hole) {
-        if (other.hole_ignore != id
+        if (usable
+        && other.hole_ignore != id
         && hole_admits(mass, other.mass)
         && torus_distance(other.x, other.y, x, y) < radius()) {
             _found = id;

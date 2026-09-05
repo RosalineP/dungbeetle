@@ -1,3 +1,6 @@
+// No steering while dropping down a hole or climbing out of one.
+if (animating()) { event_inherited(); exit; }
+
 update_state();
 
 // Every heading goes the short way round the arena, so a rival will happily
@@ -21,10 +24,13 @@ switch (state) {
         break;
 }
 
-var _top = move_speed / power(mass / BASE_MASS, 0.25);
-steer_toward(lengthdir_x(_top, _dir), lengthdir_y(_top, _dir), steer_rate);
+var _top = move_speed * mass_speed_factor(mass);
+steer_toward(lengthdir_x(_top, _dir), lengthdir_y(_top, _dir),
+    steer_rate * mass_agility_factor(mass));
 
 event_inherited();   // update_hole_ignore() + apply_motion() + eat_nearby()
 
-// A rival that reaches a hole it fits through leaves the arena for good.
-if (hole_under() != noone) instance_destroy();
+// A rival that reaches a hole it fits through leaves the arena for good. The
+// creature destroys itself at the bottom of the drop, in finish_anim.
+var _h = hole_under();
+if (_h != noone) begin_enter_hole(_h);

@@ -32,8 +32,8 @@
   "resourceVersion":"2.0",
   "solid":false,
   "spriteId":{
-    "name":"spr_pellet",
-    "path":"sprites/spr_pellet/spr_pellet.yy",
+    "name":"spr_hole",
+    "path":"sprites/spr_hole/spr_hole.yy",
   },
   "spriteMaskId":null,
   "visible":true,

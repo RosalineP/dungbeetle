@@ -17,16 +17,38 @@ get_eaten = function(_by) {
 
 /// Holes are two-way doors for the player: fall in one, climb out of another
 /// that is also big enough. With nowhere to surface, the hole is just scenery.
+/// The far end is chosen before the drop starts, so the trip is decided at the
+/// moment of entry rather than after an animation the player cannot cancel.
+anim_exit_to = noone;
+
 enter_hole = function(_from) {
     var _exits = [];
     with (obj_hole) {
-        if (id != _from && hole_admits(mass, other.mass)) array_push(_exits, id);
+        if (usable && id != _from && hole_admits(mass, other.mass)) array_push(_exits, id);
     }
     if (array_length(_exits) == 0) return false;
 
-    var _to = _exits[irandom(array_length(_exits) - 1)];
-    x = _to.x;
-    y = _to.y;
-    hole_ignore = _to;   // don't drop straight back through the far end
+    anim_exit_to = _exits[irandom(array_length(_exits) - 1)];
+    begin_enter_hole(_from);
     return true;
+};
+
+/// Method assignment, not a declaration, for the same hoisting reason as
+/// get_eaten above.
+finish_anim = function() {
+    if (anim == ANIM.EXIT) {
+        anim = ANIM.NONE;
+        anim_hole = noone;
+        return;
+    }
+    // Down one hole, up another. If the far hole collapsed during the fall,
+    // surface back where we went in rather than leaving the player nowhere.
+    var _to = instance_exists(anim_exit_to) ? anim_exit_to : anim_hole;
+    if (instance_exists(_to)) {
+        hole_ignore = _to;
+        begin_exit_hole(_to);
+    } else {
+        anim = ANIM.NONE;
+        anim_hole = noone;
+    }
 };

@@ -1,11 +1,17 @@
 var _dt = dt();
+age  += _dt;
+life -= _dt;
 
 // Every hole is temporary. obj_world notices the gap and opens a new one.
-life -= _dt;
 if (life <= 0) {
     instance_destroy();
     exit;
 }
+
+// Open at both ends of its life it is only scenery: too small to fall down and
+// too small to climb out of.
+usable = (age >= open_time) && (life > open_time);
+if (!usable) exit;
 
 emit_timer -= _dt;
 if (emit_timer <= 0) {

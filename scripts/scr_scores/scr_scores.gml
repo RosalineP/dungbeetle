@@ -7,10 +7,9 @@
 #macro SCORE_FILE  "dungacy_scores.ini"
 #macro SCORE_SLOTS 10
 
-// Screen palette for the table.
-#macro COL_DIM  make_colour_rgb(150, 140, 120)
-#macro COL_TEXT make_colour_rgb(235, 228, 210)
-#macro COL_HERO make_colour_rgb(240, 190,  90)
+// Text is white to match the start button. The one accent is the worm's
+// lighter orange, used only for the row belonging to the run just played.
+#macro COL_HERO make_colour_rgb(0xF8, 0x70, 0x60)
 
 /// The table, best first, as an array of { name, score }. Never longer than
 /// SCORE_SLOTS. A missing or empty file simply gives an empty table.

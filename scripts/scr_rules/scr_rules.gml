@@ -8,7 +8,33 @@
 /// Layer name used for every spawned instance.
 #macro LAYER_INSTANCES "Instances"
 
+// The arena grows as the player does, so gameplay measures itself against the
+// world rather than the room. The room is only ever the largest the world can
+// become; the camera shows the current world, which is what makes growing the
+// world and zooming out the same act.
+#macro WORLD_W  global.world_w
+#macro WORLD_H  global.world_h
+#macro WORLD_W0 1280
+#macro WORLD_H0 720
+
+/// Each threshold doubles the arena's AREA, so both axes grow by this and the
+/// 16:9 shape survives. Doubling area is the right amount: the player's radius
+/// goes with the square root of mass, and every threshold doubles mass, so the
+/// ball stays the same size relative to the map it is rolling around.
+#macro WORLD_GROWTH 1.41421356
+
+// Draw order, stated in one place. In GameMaker a HIGHER depth draws further
+// back, so creatures sit in front of the pellets and holes they roll over, and
+// stay visible while dropping into one.
+#macro DEPTH_CREATURE -10
+#macro DEPTH_PELLET    20
+#macro DEPTH_HOLE      60
+
 enum STATE { WANDER, CHASE, FLEE, HOLE }
+
+/// Whether a creature is mid hop-and-drop into a hole, or climbing back out.
+/// An animating creature is inert: it does not steer, eat, shove, or get eaten.
+enum ANIM { NONE, ENTER, EXIT }
 
 function can_eat(_eater_mass, _prey_mass) {
     return _eater_mass >= _prey_mass * EAT_RATIO;
@@ -22,6 +48,21 @@ function hole_admits(_hole_mass, _body_mass) {
 
 function mass_to_radius(_mass) {
     return BASE_RADIUS * sqrt(_mass / BASE_MASS);
+}
+
+// A heavy ball carries momentum. It rolls a little quicker once it is going,
+// and is much more reluctant to start, stop or change direction. The two
+// exponents are the whole feel of the game: raise the first for more reward
+// from being big, lower the second to make size less punishing to steer.
+
+/// Top speed multiplier. Mildly rising, so bigger is slightly faster.
+function mass_speed_factor(_mass) {
+    return power(_mass / BASE_MASS, 0.08);
+}
+
+/// Acceleration, braking and turning multiplier. Falls away with size.
+function mass_agility_factor(_mass) {
+    return power(_mass / BASE_MASS, -0.35);
 }
 
 /// Seconds since the last step. Movement is in pixels per second everywhere.
@@ -64,8 +105,8 @@ function torus_delta(_a, _b, _size) {
     return _d;
 }
 
-function torus_dx(_x1, _x2) { return torus_delta(_x1, _x2, room_width); }
-function torus_dy(_y1, _y2) { return torus_delta(_y1, _y2, room_height); }
+function torus_dx(_x1, _x2) { return torus_delta(_x1, _x2, WORLD_W); }
+function torus_dy(_y1, _y2) { return torus_delta(_y1, _y2, WORLD_H); }
 
 /// Distance through the seam if that is shorter.
 function torus_distance(_x1, _y1, _x2, _y2) {
@@ -77,17 +118,18 @@ function torus_direction(_x1, _y1, _x2, _y2) {
     return point_direction(0, 0, torus_dx(_x1, _x2), torus_dy(_y1, _y2));
 }
 
-/// Draw a sprite, repeating it across any seam it overlaps.
-/// _reach is how far the drawing extends from (_px, _py).
-function draw_sprite_wrapped(_spr, _px, _py, _xs, _ys, _ang, _col, _reach) {
+/// Draw a sprite, repeating it across any seam it overlaps. Takes the same
+/// arguments as draw_sprite_ext, plus _reach: how far the drawing extends from
+/// (_px, _py), which decides which seams it can straddle.
+function draw_sprite_wrapped(_spr, _sub, _px, _py, _xs, _ys, _ang, _col, _alpha, _reach) {
     var _ox = 0, _oy = 0;
-    if (_px < _reach)                _ox =  room_width;
-    else if (_px > room_width - _reach)  _ox = -room_width;
-    if (_py < _reach)                _oy =  room_height;
-    else if (_py > room_height - _reach) _oy = -room_height;
+    if (_px < _reach)                 _ox =  WORLD_W;
+    else if (_px > WORLD_W - _reach)  _ox = -WORLD_W;
+    if (_py < _reach)                 _oy =  WORLD_H;
+    else if (_py > WORLD_H - _reach)  _oy = -WORLD_H;
 
-    draw_sprite_ext(_spr, 0, _px, _py, _xs, _ys, _ang, _col, 1);
-    if (_ox != 0) draw_sprite_ext(_spr, 0, _px + _ox, _py, _xs, _ys, _ang, _col, 1);
-    if (_oy != 0) draw_sprite_ext(_spr, 0, _px, _py + _oy, _xs, _ys, _ang, _col, 1);
-    if (_ox != 0 && _oy != 0) draw_sprite_ext(_spr, 0, _px + _ox, _py + _oy, _xs, _ys, _ang, _col, 1);
+    draw_sprite_ext(_spr, _sub, _px, _py, _xs, _ys, _ang, _col, _alpha);
+    if (_ox != 0) draw_sprite_ext(_spr, _sub, _px + _ox, _py, _xs, _ys, _ang, _col, _alpha);
+    if (_oy != 0) draw_sprite_ext(_spr, _sub, _px, _py + _oy, _xs, _ys, _ang, _col, _alpha);
+    if (_ox != 0 && _oy != 0) draw_sprite_ext(_spr, _sub, _px + _ox, _py + _oy, _xs, _ys, _ang, _col, _alpha);
 }
