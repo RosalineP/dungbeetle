@@ -17,7 +17,7 @@ if (game_over) {
     draw_set_valign(fa_middle);
     draw_text(_gw / 2, _gh / 2 - 30, "Eaten.");
     draw_text(_gw / 2, _gh / 2,      "Your ball reached mass " + string(round(last_player_mass)) + ".");
-    draw_text(_gw / 2, _gh / 2 + 40, "Press R to roll again");
+    draw_text(_gw / 2, _gh / 2 + 40, "Press any key");
 
     draw_set_halign(fa_left);
     draw_set_valign(fa_top);

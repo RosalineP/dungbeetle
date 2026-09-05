@@ -7,6 +7,15 @@ sight      = 260;    // px at mass 10; scales with radius
 state = STATE.WANDER;
 wander_x = x;
 wander_y = y;
+
+// Rivals never pursue or run in a perfectly straight line. A focused heading is
+// bent toward the current wander target by wander_influence, so chases curve and
+// a fleeing rival veers instead of tracing the exact opposite of your bearing.
+// The target is re-picked on a timer even mid-chase, so the bias drifts rather
+// than settling into a constant offset.
+wander_influence = 0.25;   // 0 = perfect pursuit, 1 = pure wander
+wander_retarget  = 2.5;    // seconds between new wander targets
+wander_timer     = random_range(0, wander_retarget);
 ball_color = make_colour_rgb(200, 150, 110);   // rivals are visibly different
 
 // Rivals occasionally decide to leave down a hole. The cooldown gates how often
@@ -29,6 +38,15 @@ function hole_guarded(_h) {
 function pick_wander_target() {
     wander_x = random_range(0, room_width);
     wander_y = random_range(0, room_height);
+    wander_timer = wander_retarget;
+}
+
+/// Bend a focused heading toward the wander target by wander_influence.
+/// angle_difference gives the signed shortest turn, so this is a partial turn
+/// from _dir toward the wander bearing rather than an average of two angles.
+function wander_bias(_dir) {
+    var _w = torus_direction(x, y, wander_x, wander_y);
+    return _dir + angle_difference(_w, _dir) * wander_influence;
 }
 
 /// The closest hole in sight that this rival would fit through, or noone.
@@ -46,6 +64,11 @@ function nearest_hole_in_sight() {
 
 function update_state() {
     hole_cooldown -= dt();
+
+    // The wander target drifts regardless of state, so it keeps perturbing a
+    // chase instead of pulling it toward one fixed spot.
+    wander_timer -= dt();
+    if (wander_timer <= 0) pick_wander_target();
 
     // Already committed to a hole: keep going until it collapses, or until we
     // no longer fit. A rival that eats on the way can arrive too big for the

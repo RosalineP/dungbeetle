@@ -5,8 +5,6 @@ accel      = 1600;   // px/s^2 when a key is held
 drag       = 1000;   // px/s^2 when no key is held
 ball_color = c_white;
 
-if (!audio_is_playing(snd_music)) audio_play_sound(snd_music, 100, true);
-
 // Override: tell the world before disappearing.
 // This MUST be a method assignment, not a `function get_eaten()` declaration.
 // GML hoists named declarations to the top of the event, so a declaration here

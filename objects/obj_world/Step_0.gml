@@ -19,14 +19,19 @@ if (!game_over) {
     } else {
         hole_timer = hole_refill;
     }
+    exit;
 }
 
-if (game_over && !frozen) {
+if (!frozen) {
     frozen = true;
     instance_deactivate_all(true);   // freeze everything except this controller
 }
 
-if (game_over && keyboard_check_pressed(ord("R"))) {
+// Let the panel be read, then hand the run's score to the high score screen.
+// The short grace period stops a key that was already down from skipping it.
+over_time += dt();
+if (over_time > 2.5 || (over_time > 0.6 && keyboard_check_pressed(vk_anykey))) {
+    global.last_score = round(last_player_mass);
     instance_activate_all();   // deactivated instances must be woken before a room change
-    room_restart();
+    room_goto(rm_high_score);
 }

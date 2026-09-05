@@ -38,6 +38,15 @@ function move_toward_2d(_vx, _vy, _tx, _ty, _step) {
     return [_vx + _dx / _d * _step, _vy + _dy / _d * _step];
 }
 
+/// Switch the looping background track. Returns immediately if the requested
+/// track is already playing, so re-entering a room never restarts the music.
+function play_music(_snd) {
+    if (audio_is_playing(_snd)) return;
+    if (audio_is_playing(snd_music)) audio_stop_sound(snd_music);
+    if (audio_is_playing(snd_menu))  audio_stop_sound(snd_menu);
+    audio_play_sound(_snd, 100, true);
+}
+
 // --- Torus geometry -------------------------------------------------------
 // The arena wraps on both axes, so nothing may use raw coordinate differences:
 // two points either side of a seam are neighbours, not opposites.
