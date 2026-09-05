@@ -1,9 +1,5 @@
-draw_set_valign(fa_top);
-
 // Title.
-draw_set_halign(fa_center);
-draw_set_colour(COL_TEXT);
-draw_text_transformed(cx, 40, "HIGH SCORES", 4, 4, 0);
+draw_text_ui(cx, 44, "high scores", 60, c_white, 1, fa_center);
 
 // The worm separates the title from the table. Its origin is the top left, so
 // it is offset by half its scaled width to sit centred.
@@ -21,7 +17,8 @@ for (var i = 0; i < SCORE_SLOTS; i++) {
     var _y = list_top + i * row_h;
     var _name = "";
     var _sc = 0;
-    var _col = COL_TEXT;
+    var _col = c_white;
+    var _alpha = 1;
     var _filled = false;
 
     if (entering && i == rank) {
@@ -34,33 +31,24 @@ for (var i = 0; i < SCORE_SLOTS; i++) {
         if (_src < array_length(scores)) {
             _name = scores[_src].name;
             _sc = scores[_src].score;
-            _col = (i == new_rank) ? COL_HERO : COL_TEXT;
+            if (i == new_rank) _col = COL_HERO;
             _filled = true;
         }
     }
 
-    draw_set_colour(_filled ? _col : COL_DIM);
-    draw_set_halign(fa_left);
-    draw_text_transformed(_x_rank, _y, string(i + 1) + ".", 2, 2, 0);
-
+    if (!_filled) _alpha = 0.25;
+    draw_text_ui(_x_rank, _y, string(i + 1) + ".", 24, _col, _alpha);
     if (_filled) {
-        draw_text_transformed(_x_name, _y, _name, 2, 2, 0);
-        draw_set_halign(fa_right);
-        draw_text_transformed(_x_score, _y, string(round(_sc)), 2, 2, 0);
+        draw_text_ui(_x_name,  _y, _name, 24, _col, _alpha);
+        draw_text_ui(_x_score, _y, string(round(_sc)), 24, _col, _alpha, fa_right);
     } else {
-        draw_text_transformed(_x_name, _y, "- - -", 2, 2, 0);
+        draw_text_ui(_x_name, _y, "- - -", 24, _col, _alpha);
     }
 }
 
 // Footer.
-draw_set_halign(fa_center);
-draw_set_colour(COL_TEXT);
 if (entering) {
-    draw_text_transformed(cx, 680, "New high score! Type your name, then press Enter", 2, 2, 0);
+    draw_text_ui(cx, 672, "new high score! type your name, then press enter", 24, c_white, 1, fa_center);
 } else {
-    draw_text_transformed(cx, 680, "Press R to roll again", 2, 2, 0);
+    draw_text_ui(cx, 672, "press r to roll again", 24, c_white, 1, fa_center);
 }
-
-draw_set_halign(fa_left);
-draw_set_valign(fa_top);
-draw_set_colour(c_white);

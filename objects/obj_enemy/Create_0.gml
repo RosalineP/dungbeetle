@@ -13,8 +13,8 @@ wander_y = y;
 // a fleeing rival veers instead of tracing the exact opposite of your bearing.
 // The target is re-picked on a timer even mid-chase, so the bias drifts rather
 // than settling into a constant offset.
-wander_influence = 0.25;   // 0 = perfect pursuit, 1 = pure wander
-wander_retarget  = 2.5;    // seconds between new wander targets
+wander_influence = 0.4;   // 0 = perfect pursuit, 1 = pure wander
+wander_retarget  = 3.5;    // seconds between new wander targets
 wander_timer     = random_range(0, wander_retarget);
 ball_color = make_colour_rgb(200, 150, 110);   // rivals are visibly different
 
@@ -29,15 +29,15 @@ hole_cooldown = random_range(hole_recheck, hole_recheck * 3);
 /// Don't walk into an ambush: if something that can eat us is sitting nearer
 /// the hole than we are, the exit is guarded and the trip is suicide.
 function hole_guarded(_h) {
-    if (!instance_exists(obj_player)) return false;
+    if (!instance_exists(obj_player) || obj_player.animating()) return false;
     if (!can_eat(obj_player.mass, mass)) return false;
     return torus_distance(obj_player.x, obj_player.y, _h.x, _h.y)
          < torus_distance(x, y, _h.x, _h.y);
 }
 
 function pick_wander_target() {
-    wander_x = random_range(0, room_width);
-    wander_y = random_range(0, room_height);
+    wander_x = random_range(0, WORLD_W);
+    wander_y = random_range(0, WORLD_H);
     wander_timer = wander_retarget;
 }
 
@@ -54,7 +54,7 @@ function nearest_hole_in_sight() {
     var _best = noone;
     var _bestd = sight * (radius() / BASE_RADIUS);
     with (obj_hole) {
-        if (hole_admits(mass, other.mass)) {
+        if (usable && hole_admits(mass, other.mass)) {
             var _d = torus_distance(other.x, other.y, x, y);
             if (_d < _bestd) { _bestd = _d; _best = id; }
         }
@@ -76,13 +76,16 @@ function update_state() {
     // at the moment it commits.
     if (state == STATE.HOLE) {
         if (instance_exists(hole_target)
+        && hole_target.usable
         && hole_admits(hole_target.mass, mass)
         && !hole_guarded(hole_target)) return;
         hole_target = noone;
         state = STATE.WANDER;
     }
 
-    if (instance_exists(obj_player)) {
+    // A player mid-transit is neither threat nor prey, so rivals lose interest
+    // rather than converging on the hole they went down.
+    if (instance_exists(obj_player) && !obj_player.animating()) {
         var _p = obj_player;
         var _d = torus_distance(x, y, _p.x, _p.y);   // the seam is a shortcut, not a wall
         if (_d > sight * (radius() / BASE_RADIUS))  state = STATE.WANDER;
