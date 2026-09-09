@@ -9,7 +9,7 @@ global.world_h = WORLD_H0;
 growth_at = [50, 100, 200, 400, 800, 1600, 3200];   // player mass, in order
 tier      = 0;                                      // how many we have crossed
 
-base_pellets = 60;
+base_pellets = 30;
 base_enemies = 6;
 base_holes   = 4;
 base_safe    = 260;                 // nothing spawns this close to the player
@@ -19,10 +19,20 @@ base_safe    = 260;                 // nothing spawns this close to the player
 /// tests every pellet every step.
 function refresh_limits() {
     var _lin = WORLD_W / WORLD_W0;
-    max_pellets = min(360, round(base_pellets * _lin));
-    max_enemies = min(20,  round(base_enemies * _lin));
-    max_holes   = min(14,  round(base_holes   * _lin));
+    max_enemies = min(20, round(base_enemies * _lin));
+    max_holes   = min(14, round(base_holes   * _lin));
     safe_radius = base_safe * _lin;
+}
+
+/// How many ambient pellets the world wants right now. Free food thins out as
+/// the player grows and stops entirely at PELLET_FADE_MASS, so the late game is
+/// fought over what other creatures drop rather than grazed off the floor.
+/// Recomputed rather than cached: it moves with the player's mass, not just at
+/// the growth thresholds.
+function pellet_cap() {
+    var _lin = WORLD_W / WORLD_W0;
+    var _taper = clamp(1 - (last_player_mass - BASE_MASS) / (PELLET_FADE_MASS - BASE_MASS), 0, 1);
+    return round(min(180, base_pellets * _lin) * _taper);
 }
 refresh_limits();
 
@@ -44,6 +54,8 @@ apply_camera();
 game_over        = false;
 frozen           = false;
 over_time        = 0;      // seconds since death, before handing over to the score screen
+over_linger      = 2.0;    // how long the arena keeps running under the panel
+over_dwell       = 4.5;    // total time on the panel before moving on by itself
 last_player_mass = BASE_MASS;
 hole_timer       = 0;
 
@@ -90,12 +102,36 @@ function spawn_pellet() {
         LAYER_INSTANCES, obj_pellet, { mass_value: random_range(0.5, 2.5) });
 }
 
+/// A spot clear of the player AND of every existing hole. Overlapping mouths
+/// read as one strange blob and make the size rules meaningless, so a hole that
+/// cannot find room simply is not placed; the caller tries again next tick.
+function hole_spawn_point(_r) {
+    var _px = WORLD_W / 2, _py = WORLD_H / 2;
+    if (instance_exists(obj_player)) { _px = obj_player.x; _py = obj_player.y; }
+
+    for (var _t = 0; _t < 30; _t++) {
+        var _x = random_range(0, WORLD_W), _y = random_range(0, WORLD_H);
+        if (torus_distance(_x, _y, _px, _py) < safe_radius) continue;
+
+        var _clear = true;
+        with (obj_hole) {
+            if (torus_distance(_x, _y, x, y) < _r + radius() + 24) _clear = false;
+        }
+        if (_clear) return [_x, _y];
+    }
+    return noone;
+}
+
 /// Holes are sized against the player, so there is usually one they can enter
 /// and one big enough to be pouring out something dangerous.
 function spawn_hole() {
-    var _p = spawn_point();
+    // Size first: how much room the hole needs decides where it can go.
+    var _m = last_player_mass * random_range(hole_band[0], hole_band[1]);
+    var _p = hole_spawn_point(mass_to_radius(_m));
+    if (_p == noone) return;
+
     instance_create_layer(_p[0], _p[1], LAYER_INSTANCES, obj_hole, {
-        start_mass: last_player_mass * random_range(hole_band[0], hole_band[1]),
+        start_mass: _m,
         life:       random_range(hole_life[0], hole_life[1]),
     });
 }
@@ -109,6 +145,6 @@ function on_player_eaten(_final_mass) {
 
 // Populate. Rivals are not placed directly: they crawl out of holes.
 instance_create_layer(WORLD_W / 2, WORLD_H / 2, LAYER_INSTANCES, obj_player, { start_mass: BASE_MASS });
-repeat (max_pellets) spawn_pellet();
+repeat (pellet_cap()) spawn_pellet();
 repeat (max_holes)   spawn_hole();
 alarm[0] = spawn_interval;

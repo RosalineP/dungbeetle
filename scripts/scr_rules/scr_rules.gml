@@ -30,7 +30,7 @@
 #macro DEPTH_PELLET    20
 #macro DEPTH_HOLE      60
 
-enum STATE { WANDER, CHASE, FLEE, HOLE }
+enum STATE { WANDER, CHASE, FLEE, HOLE, FEED }
 
 /// Whether a creature is mid hop-and-drop into a hole, or climbing back out.
 /// An animating creature is inert: it does not steer, eat, shove, or get eaten.
@@ -63,6 +63,38 @@ function mass_speed_factor(_mass) {
 /// Acceleration, braking and turning multiplier. Falls away with size.
 function mass_agility_factor(_mass) {
     return power(_mass / BASE_MASS, -0.35);
+}
+
+// How long a scattered pellet is in the air, and how far through that flight it
+// becomes collectible. Armed well before it lands, because a creature moving at
+// speed covers more ground than the whole scatter is wide: a pellet that only
+// arms on landing is one the killer has already rolled past.
+#macro PELLET_FLY  0.28
+#macro PELLET_ARM  0.45
+
+/// Drawn radius of a mass-1 pellet. Everything else about a pellet's size is
+/// derived, so changing the artwork's resolution needs no other edit.
+#macro PELLET_R0 8
+
+function pellet_radius(_m) {
+    return PELLET_R0 * sqrt(_m);
+}
+
+/// Sprite scale that gives a pellet of mass _m its proper radius.
+function pellet_scale(_m) {
+    return pellet_radius(_m) / (sprite_get_width(spr_pellet) / 2);
+}
+
+/// Ambient food thins out as the player grows and stops entirely at this mass.
+/// Past it the only meaningful food is what other creatures drop when they die.
+#macro PELLET_FADE_MASS 800
+
+/// How far a burst creature's remains fly. Tight for small ones and opening up
+/// slightly faster than the body does: a radius goes with the square root of
+/// mass, so the extra exponent here is what makes big kills spray wider than
+/// they are round.
+function scatter_radius(_mass) {
+    return mass_to_radius(_mass) * 1.15 * power(_mass / BASE_MASS, 0.12);
 }
 
 /// Seconds since the last step. Movement is in pixels per second everywhere.
