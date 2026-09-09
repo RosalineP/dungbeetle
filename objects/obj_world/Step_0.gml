@@ -7,7 +7,10 @@ if (instance_exists(obj_player)) {
     game_over = true;
 }
 
-if (!game_over) {
+// The arena keeps running until it is frozen, which is a moment AFTER the loss,
+// not at it. That moment is the point: the player's ball has just burst, and
+// the rivals that killed them pile onto the remains while the panel fades up.
+if (!frozen) {
     // Outgrowing the arena doubles its area. Several thresholds can fall in one
     // step if a very large meal lands, so this is a while, not an if.
     while (tier < array_length(growth_at) && last_player_mass >= growth_at[tier]) {
@@ -38,18 +41,21 @@ if (cam_w != WORLD_W) {
     apply_camera();
 }
 
-if (game_over && !frozen) {
+if (!game_over) exit;
+
+over_time += dt();
+
+// Let it play on for a beat, then settle the arena so the panel is read against
+// a still picture rather than a scene that never stops moving.
+if (!frozen && over_time >= over_linger) {
     frozen = true;
     instance_deactivate_all(true);   // freeze everything except this controller
 }
 
-// Let the panel be read, then hand the run's score to the high score screen.
-// The short grace period stops a key that was already down from skipping it.
-if (game_over) {
-    over_time += dt();
-    if (over_time > 2.5 || (over_time > 0.6 && keyboard_check_pressed(vk_anykey))) {
-        global.last_score = round(last_player_mass);
-        instance_activate_all();   // deactivated instances must be woken before a room change
-        room_goto(rm_high_score);
-    }
+// Hand the run's score to the high score screen. The grace period stops a key
+// that was already down at the moment of death from skipping the panel.
+if (over_time > over_dwell || (over_time > 0.8 && keyboard_check_pressed(vk_anykey))) {
+    global.last_score = round(last_player_mass);
+    instance_activate_all();   // deactivated instances must be woken before a room change
+    room_goto(rm_high_score);
 }

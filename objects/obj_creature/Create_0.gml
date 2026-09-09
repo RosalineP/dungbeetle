@@ -33,8 +33,33 @@ depth = DEPTH_CREATURE;
 
 mass = start_mass;
 
+// Pellets rolled over stick to the ball and are worked in over the next second
+// or so. The mass counts immediately -- `mass` is the truth the game runs on --
+// but the ball only LOOKS as big as what it has finished absorbing, so a big
+// mouthful arrives as visible lumps rather than a silent jump in size.
+stuck      = [];
+stuck_base = 0.85;   // seconds to absorb one pellet
+stuck_per  = 0.12;   // added per pellet already riding
+stuck_max  = 2.50;   // however many are stuck, never slower than this
+
 function radius() {
     return mass_to_radius(mass);
+}
+
+/// Mass the ball looks like it has: everything taken in, less whatever is still
+/// riding on the surface waiting to be folded in.
+function shown_mass() {
+    var _m = mass;
+    var _n = array_length(stuck);
+    for (var i = 0; i < _n; i++) {
+        var _s = stuck[i];
+        _m -= _s.m * (1 - _s.t / _s.dur);
+    }
+    return max(1, _m);
+}
+
+function shown_radius() {
+    return mass_to_radius(shown_mass());
 }
 
 function set_mass(_m) {
@@ -42,6 +67,87 @@ function set_mass(_m) {
     var _s = radius() / BASE_RADIUS;
     image_xscale = _s;   // scales the sprite AND its collision mask
     image_yscale = _s;
+}
+
+/// Take a pellet onto the ball's surface. _dx and _dy point from us to where it
+/// was picked up, which is where it sticks.
+function absorb_pellet(_m, _dx, _dy) {
+    mass = max(mass + _m, 1);
+    var _s = radius() / BASE_RADIUS;
+    image_xscale = _s;
+    image_yscale = _s;
+
+    // Ball-local frame: a runs along the way we point, b across it, c straight
+    // up out of the ground. Landing on the top surface means a positive c.
+    var _d = point_distance(0, 0, _dx, _dy);
+    var _a = 0, _b = 0;
+    if (_d > 0) {
+        var _ux = _dx / _d, _uy = _dy / _d;
+        // Capped short of the rim: a pellet stuck exactly on the silhouette
+        // would be edge-on and invisible until the ball had rolled it over the
+        // top. This lands it on the visible upper surface instead.
+        var _f = min(0.85, _d / max(1, radius()));
+        _a = (_ux * lengthdir_x(1, facing) + _uy * lengthdir_y(1, facing)) * _f;
+        _b = (_ux * lengthdir_x(1, facing + 90) + _uy * lengthdir_y(1, facing + 90)) * _f;
+    }
+
+    array_push(stuck, {
+        m: _m,
+        t: 0,
+        dur: min(stuck_max, stuck_base + stuck_per * array_length(stuck)),
+        a: _a, b: _b,
+        c: sqrt(max(0, 1 - _a * _a - _b * _b)),
+        roll0: roll,
+        scale: pellet_scale(_m),
+        ang: random(360),
+    });
+}
+
+/// Work the stuck pellets in. Runs even mid hole-transit, so a ball never
+/// surfaces still wearing lumps it swallowed a while ago.
+function update_stuck() {
+    var _dt = dt();
+    for (var i = array_length(stuck) - 1; i >= 0; i--) {
+        stuck[i].t += _dt;
+        if (stuck[i].t >= stuck[i].dur) array_delete(stuck, i, 1);
+    }
+}
+
+/// Burst into pellets. A kill is no longer swallowed whole: it leaves a ring of
+/// dung on the ground that the killer has to roll over like any other food, and
+/// that anyone else nearby can get to first.
+/// _total is the FULL mass: growth_yield is charged once, when a pellet is
+/// picked up, so collecting every piece is worth exactly what eating the
+/// creature outright used to be.
+function scatter_pellets(_total, _dir, _sweep, _spd) {
+    var _n = clamp(round(_total / 2.5), 4, 26);
+    var _each = _total / _n;
+    var _spread = scatter_radius(mass);
+
+    // Where the killer will actually be when this lands and arms. Without this
+    // lead the scatter is dropped behind a fast mover: at small sizes it covers
+    // more ground during the flight than the entire scatter is wide, and would
+    // sail straight past its own kill.
+    var _lead = _spd * PELLET_FLY * PELLET_ARM;
+
+    for (var i = 0; i < _n; i++) {
+        // Laid down the killer's heading rather than in a ring, so simply
+        // carrying on forward sweeps most of it up. Turning back should be for
+        // the stragglers, not for the bulk of the meal. Starting a little
+        // behind the lead point covers a killer that is slowing down.
+        var _along = _lead - _sweep * 0.5 + random(1) * (_spread + _sweep * 0.5);
+
+        // Across the heading, a triangular spread scaled so about 80% land
+        // inside the swath the killer's mouth actually covers. A triangular
+        // distribution on [-1,1] encloses 80% of its samples within 0.553.
+        var _perp = (random(1) - random(1)) * (_sweep / 0.553);
+
+        var _ox = lengthdir_x(_along, _dir) + lengthdir_x(_perp, _dir + 90);
+        var _oy = lengthdir_y(_along, _dir) + lengthdir_y(_perp, _dir + 90);
+        var _p = instance_create_layer(x, y, LAYER_INSTANCES, obj_pellet,
+            { mass_value: _each });
+        _p.launch(point_direction(0, 0, _ox, _oy), point_distance(0, 0, _ox, _oy));
+    }
 }
 
 /// Accelerate the velocity toward a target velocity. Children call this from Step.
@@ -147,21 +253,24 @@ function apply_motion() {
 function eat_nearby() {
     var _r = radius() * mouth_scale;
 
-    // Pellets: always edible.
+    // Pellets: always edible, once they have armed.
     with (obj_pellet) {
-        if (torus_distance(other.x, other.y, x, y) < _r + 8 * image_xscale) {
-            other.set_mass(other.mass + mass_value * other.growth_yield);
+        if (can_pick() && torus_distance(other.x, other.y, x, y) < _r + rad) {
+            other.absorb_pellet(mass_value * other.growth_yield,
+                torus_dx(other.x, x), torus_dy(other.y, y));
             instance_destroy();
         }
     }
 
-    // Other creatures: only if we pass the size rule.
+    // Other creatures: only if we pass the size rule. Nothing is gained here
+    // directly -- the loser bursts, and the winner has to collect the pieces.
     with (obj_creature) {
         if (id != other.id
         && !animating()
         && can_eat(other.mass, mass)
         && torus_distance(other.x, other.y, x, y) < _r + radius()) {
-            other.set_mass(other.mass + mass * other.growth_yield);
+            scatter_pellets(mass, other.facing, other.radius() * other.mouth_scale,
+                point_distance(0, 0, other.vx, other.vy));
             get_eaten(other.id);
         }
     }

@@ -17,6 +17,11 @@ switch (state) {
     case STATE.FLEE:
         _dir = wander_bias(torus_direction(obj_player.x, obj_player.y, x, y));
         break;
+    case STATE.FEED:
+        // Straight at it: a pellet is a small target, and a bent approach makes
+        // rivals circle crumbs instead of collecting them.
+        _dir = torus_direction(x, y, feed_target.x, feed_target.y);
+        break;
     case STATE.HOLE:
         // Deliberately exact: a bent approach makes rivals orbit a small hole
         // instead of dropping into it.

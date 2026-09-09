@@ -21,6 +21,13 @@ ball_color = make_colour_rgb(200, 150, 110);   // rivals are visibly different
 // Rivals occasionally decide to leave down a hole. The cooldown gates how often
 // they even consider it; the chance keeps it rare when they do. The random
 // start means one that has just crawled out will not turn round immediately.
+// Rivals graze. A pellet on the ground is worth going for, so a scattered kill
+// is contested rather than left for whoever made it.
+feed_target   = noone;
+feed_sight    = 300;   // px at mass 10; scales with radius
+feed_recheck  = 0.4;   // seconds between searches, so this is not a per-step scan
+feed_cooldown = random_range(0, 0.4);
+
 hole_target   = noone;
 hole_chance   = 0.15;   // probability of committing, per check
 hole_recheck  = 1.5;    // seconds between checks
@@ -49,6 +56,21 @@ function wander_bias(_dir) {
     return _dir + angle_difference(_w, _dir) * wander_influence;
 }
 
+/// The closest settled pellet in sight, or noone. Throttled by feed_cooldown:
+/// every rival testing every pellet every step is the one thing here that would
+/// actually cost frames.
+function nearest_pellet_in_sight() {
+    var _best = noone;
+    var _bestd = feed_sight * (radius() / BASE_RADIUS);
+    with (obj_pellet) {
+        if (can_pick()) {
+            var _d = torus_distance(other.x, other.y, x, y);
+            if (_d < _bestd) { _bestd = _d; _best = id; }
+        }
+    }
+    return _best;
+}
+
 /// The closest hole in sight that this rival would fit through, or noone.
 function nearest_hole_in_sight() {
     var _best = noone;
@@ -64,6 +86,7 @@ function nearest_hole_in_sight() {
 
 function update_state() {
     hole_cooldown -= dt();
+    feed_cooldown -= dt();
 
     // The wander target drifts regardless of state, so it keeps perturbing a
     // chase instead of pulling it toward one fixed spot.
@@ -94,6 +117,19 @@ function update_state() {
         else                                        state = STATE.WANDER;
     } else {
         state = STATE.WANDER;
+    }
+
+    // Grazing only fills otherwise idle time: a rival being hunted, or hunting,
+    // has better things to do than pick up crumbs.
+    if (state == STATE.WANDER) {
+        if (!instance_exists(feed_target)) {
+            feed_target = noone;
+            if (feed_cooldown <= 0) {
+                feed_cooldown = feed_recheck;
+                feed_target = nearest_pellet_in_sight();
+            }
+        }
+        if (instance_exists(feed_target)) state = STATE.FEED;
     }
 
     if (hole_cooldown <= 0) {
